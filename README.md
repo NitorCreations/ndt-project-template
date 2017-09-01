@@ -37,4 +37,5 @@ Now changes into project files will trigger modification job that
 modify created jobs, meaning that history of the job is presevered.
 
 Next to bake image(s) you need to at minimum define values for
-properties that defined in infra-master.properties.
+properties that defined in infra-master.properties and components
+infra.properties.
