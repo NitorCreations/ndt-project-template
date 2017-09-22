@@ -6,21 +6,21 @@ public class Settings {
     private final Map propFiles = [:]
     private final Map jobTriggers = [:]
     private final Map stackImageMap = [:]
+    private jobDefs = null
     public Settings(remoteConfig, __FILE__) {
         this.gitUrl = remoteConfig.url
         this.gitCredentials = remoteConfig.credentialsId
         this.workspace = new File(__FILE__).parentFile.absoluteFile
         this.jobPropertiesDir = new File(workspace, "job-properties")
         
-        def jobDefs = getJobs()
         /**
          * Get mappings for image jobs to trigger (and block) deploy jobs
          **/
-        for (jobDef in jobDefs) {
+        for (jobDef in this.getJobs()) {
             def ( imageDir, gitBranch, jobType, stackName ) = jobDef.tokenize(':')
             if ("stack" == jobType) {
-                def imageJobName = getJobName(gitBranch, imageDir)
-                def jobName = getJobName(gitBranch, imageDir, stackName)
+                def imageJobName = this.getJobName(gitBranch, imageDir, "image", "-")
+                def jobName = this.getJobName(gitBranch, imageDir, jobType, stackName)
                 if (imageJobName != null) {
                     stackImageMap["$gitBranch-$imageDir-$stackName"] = imageJobName
                 }
@@ -40,17 +40,20 @@ public class Settings {
      * Runs `ndt list-jobs` and returns the result as a string array
      **/
     public String[] getJobs() {
-        def process = new ProcessBuilder(["ndt", "list-jobs"])
-                .redirectErrorStream(true)
-                .directory(this.workspace)
-                .start()
-        def ret = []
-        process.inputStream.eachLine {
-            println it
-            ret << it
+        if (this.jobDefs == null) {
+            def process = new ProcessBuilder(["ndt", "list-jobs"])
+                    .redirectErrorStream(true)
+                    .directory(this.workspace)
+                    .start()
+            def ret = []
+            process.inputStream.eachLine {
+                println it
+                ret << it
+            }
+            process.waitFor();
+            this.jobDefs = ret;
         }
-        process.waitFor();
-        return ret
+        return this.jobDefs
     }
     /**
     * Loads of file into a properties object optionally ignoring FileNotFoundException
@@ -87,6 +90,12 @@ public class Settings {
     public Properties loadStackProps(gitBranch, imageDir, stackName, quiet=false) {
         return loadProps("stack-$gitBranch-$imageDir-${stackName}.properties", quiet)
     }
+    /**
+     * Load properties for a docker job
+     **/
+    public Properties loadDockerProps(gitBranch, imageDir, dockerName, quiet=false) {
+        return loadProps("docker-$gitBranch-$imageDir-${dockerName}.properties", quiet)
+    }
 	/**
 	 * Gets triggers defined for a bake job
 	 **/
@@ -102,12 +111,16 @@ public class Settings {
     /**
      * Resolves a name for the given job
      **/
-    public String getJobName(gitBranch, imageDir, stackName="-") {
+    public String getJobName(gitBranch, imageDir, jobType, stackName) {
         def fileName = "${gitBranch}-${imageDir}"
-        if (stackName == null || stackName == "-") {
+        if (jobType == "image") {
             fileName = "image-${fileName}.properties"
-        } else {
+        } else if (jobType == "stack"){
             fileName = "stack-${fileName}-${stackName}.properties"
+        } else if (jobType == "docker") {
+            fileName = "docker-${fileName}-${stackName}.properties"
+        } else {
+            return null
         }
         def properties = loadProps(fileName, true)
         if (properties.JENKINS_JOB_NAME != null) {
@@ -117,8 +130,12 @@ public class Settings {
                 return null
             }
         	def jobPrefix = properties.JENKINS_JOB_PREFIX
-            if (stackName != null && stackName != "-") { 
-            	return "$jobPrefix-$imageDir-deploy-$stackName"
+            if (stackName != null && stackName != "-") {
+                if (jobType == "stack") {
+            	    return "$jobPrefix-$imageDir-deploy-$stackName"
+                } else if (jobType == "docker") {
+                    return "$jobPrefix-$imageDir-docker-bake-$stackName"
+                }
             } else if (properties.BAKE_IMAGE_BRANCH != null && properties.BAKE_IMAGE_BRANCH != gitBranch) {
     			return "$jobPrefix-$imageDir-promote"
             } else {
@@ -132,11 +149,20 @@ public class Settings {
 remoteConfig = SEED_JOB.scm.userRemoteConfigs[0]
 final Settings s = new Settings(remoteConfig, __FILE__)
 
-def private addSCMTriggers(job, properties, s) {
+def private addSCMTriggers(job, jobType, properties, s) {
+    if (properties.MANUAL_DEPLOY == "y") {
+        return;
+    }
     job.with {
         triggers {
-            if (properties.STACK_CRON != null) {
+            if (jobType == "image" && properties.IMAGE_CRON != null) {
                 cron(properties.IMAGE_CRON)
+            }
+            if (jobType == "stack" && properties.STACK_CRON != null) {
+                cron(properties.STACK_CRON)
+            }
+            if (jobType == "docker" && properties.DOCKER_CRON != null) {
+                cron(properties.DOCKER_CRON)
             }
             if (s.gitUrl.indexOf("github.com") > -1) {
                 githubPush()
@@ -178,12 +204,11 @@ for (jobDef in jobDefs) {
     Properties properties
     Properties imageProperties = s.loadImageProps(gitBranch, imageDir, true)
     def jobPrefix = imageProperties.JENKINS_JOB_PREFIX
-    def jobName = s.getJobName(gitBranch, imageDir, stackName) 
+    def jobName = s.getJobName(gitBranch, imageDir, jobType, stackName)
     if (jobName == null) {
         continue
     }
-    //def blockOnArray = [SEED_JOB.name]
-    def blockOnArray = ["generate-jobs"]
+    def blockOnArray = [SEED_JOB.name]
     if (jobType == "stack") {
         properties = s.loadStackProps(gitBranch, imageDir, stackName)
         jobPrefix = properties.JENKINS_JOB_PREFIX
@@ -205,17 +230,11 @@ for (jobDef in jobDefs) {
                     "        sh \"ndt deploy-stack -d $imageDir $stackName \\\"\$AMI_ID\\\" $imageTag\"\n" +
                     "        input(message: \"Does the changeset above look ok?\")\n        "
         }
+        def postDeploy=""
+        if (properties.POST_DEPLOY != null) {
+            postDeploy="sh \"" + properties.POST_DEPLOY + "\""
+        }
         def job = pipelineJob(jobName) {
-            scm {
-                git {
-                    remote {
-                        name("origin")
-                        url(s.gitUrl)
-                        credentials(s.gitCredentials)
-                    }
-                    branch(gitBranch)
-                }
-            }
             parameters {
                 stringParam('AMI_ID', '', 'Ami id if triggered from a bake job')
             }
@@ -227,26 +246,25 @@ node {
               doGenerateSubmoduleConfigurations: false,
               extensions: [
                 [\$class: 'PathRestriction',
-                 excludedRegions: '\\\\Q$imageDir/stack-$stackName/\\\\E.*',
-                 includedRegions: '\\\\Q$imageDir/image/\\\\E.*']],
+                 includedRegions: '\\\\Q$imageDir/stack-$stackName/\\\\E.*',
+                 excludedRegions: '']],
               submoduleCfg: [],
               userRemoteConfigs: [[credentialsId: \"$s.gitCredentials\",
               url: \"$s.gitUrl\"]]])
     wrap([\$class: 'AnsiColorBuildWrapper']) {
         ${dryRun}stage \"Deploy or update stack\"
         sh \"ndt deploy-stack $imageDir $stackName \\\"\$AMI_ID\\\" $imageTag\"
+        ${postDeploy}
     }
+    archiveArtifacts artifacts: 'ami.properties'
 }
 """)
                 }
             }
             description("nitor-deploy-tools deploy stack job")
             blockOn(blockOnArray)
-            publishers {
-                archiveArtifacts("ami.properties")
-            }
         }
-        addSCMTriggers(job, properties, s)
+        addSCMTriggers(job, jobType, properties, s)
         if (viewMap[jobPrefix] == null) {
             viewMap[jobPrefix] = [jobName]
         } else {
@@ -256,7 +274,7 @@ node {
             targetJobs = []
             for (toBranch in properties.AUTOPROMOTE_TO_BRANCH.split(",")) {
                 if (toBranch != gitBranch) {
-                	targetJobs << s.getJobName(toBranch, imageDir)
+                    targetJobs << s.getJobName(toBranch, imageDir, "image", "-")
                 }
             }
             job.with {
@@ -303,7 +321,50 @@ ndt undeploy-stack $imageDir $stackName
             }
             viewMap[jobPrefix] << undeployJobName
         }
-    } else {
+    } else if (jobType == "docker") {
+        properties = s.loadDockerProps(gitBranch, imageDir, stackName)
+        jobPrefix = properties.JENKINS_JOB_PREFIX
+        if ("y" == properties.SKIP_DOCKER_JOB || (imageDir == "bootstrap" && "n" != properties.SKIP_DOCKER_JOB)) {
+            continue
+        }
+        if (properties.BAKE_IMAGE_BRANCH != null && properties.BAKE_IMAGE_BRANCH != gitBranch) {
+            continue
+        }
+        println "Generating docker bake job $jobName"
+        def job = freeStyleJob(jobName) {
+            scm {
+                git {
+                    remote {
+                        name("origin")
+                        url(s.gitUrl)
+                        credentials(s.gitCredentials)
+                    }
+                    branch(gitBranch)
+                }
+            }
+			blockOn(blockOnArray)
+        }
+        addSCMTriggers(job, jobType, properties, s)
+        job.with {
+            steps {
+                shell("ndt bake-docker " + imageDir + " " + stackName)
+            }
+            description("nitor-deploy-tools bake docker job")
+            configure { project ->
+                project / 'scm' / 'extensions' << 'hudson.plugins.git.extensions.impl.PathRestriction' {
+                    includedRegions "\\Q$imageDir/docker-\\E.*"
+                }
+                project / 'buildWrappers' << 'hudson.plugins.ansicolor.AnsiColorBuildWrapper' {
+                    colorMapName 'xterm'
+                }
+            }
+        }
+        if (viewMap[jobPrefix] == null) {
+            viewMap[jobPrefix] = [jobName]
+        } else {
+            viewMap[jobPrefix] << jobName
+        }
+    } else if (jobType == "image") {
         properties = imageProperties
         if ("y" == properties.SKIP_IMAGE_JOB || (imageDir == "bootstrap" && "n" != properties.SKIP_IMAGE_JOB)) {
             continue
@@ -322,11 +383,22 @@ ndt undeploy-stack $imageDir $stackName
             }
 			blockOn(blockOnArray)
         }
+        job.with {
+            configure { project ->
+                project / 'scm' / 'extensions' << 'hudson.plugins.git.extensions.impl.PathRestriction' {
+                    includedRegions "\\Q$imageDir/\\E.*"
+                    excludedRegions "\\Q$imageDir/stack-\\E.*\n\\Q$imageDir/docker-\\E.*"
+                }
+                project / 'buildWrappers' << 'hudson.plugins.ansicolor.AnsiColorBuildWrapper' {
+                    colorMapName 'xterm'
+                }
+            }
+        }
         if (properties.BAKE_IMAGE_BRANCH != null && properties.BAKE_IMAGE_BRANCH != gitBranch) {
             /**
              * Create a image promotion job instead of a image baking job
              **/
-            def promotableJob = s.getJobName(properties.BAKE_IMAGE_BRANCH, imageDir)
+            def promotableJob = s.getJobName(properties.BAKE_IMAGE_BRANCH, imageDir, "image", "-")
             println "Generating image promote job $jobName from $promotableJob"
             job.with {
                 steps {
@@ -363,18 +435,9 @@ return ret
                     shell("ndt bake-image " + imageDir)
                 }
                 description("nitor-deploy-tools bake image job")
-                configure { project ->
-                    project / 'scm' / 'extensions' << 'hudson.plugins.git.extensions.impl.PathRestriction' {
-                        includedRegions "\\Q$imageDir/image/\\E.*"
-                        excludedRegions ""
-                    }
-                    project / 'buildWrappers' << 'hudson.plugins.ansicolor.AnsiColorBuildWrapper' {
-                        colorMapName 'xterm'
-                    }
-                }
             }
         }
-        addSCMTriggers(job, properties, s)
+        addSCMTriggers(job, jobType, properties, s)
         addParamTriggers(job, gitBranch, imageDir, s)
         if (viewMap[jobPrefix] == null) {
             viewMap[jobPrefix] = [jobName]
