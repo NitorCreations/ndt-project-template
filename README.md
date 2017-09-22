@@ -18,6 +18,10 @@ last. Naturally, last one wins.
 This repository contains bootstrapping scripts and manuals that one
 can 'quickly' setup a project components into AWS.
 
+### Overview of required properties and existing configuration files
+
+TODO
+
 ## Setup
 
 Setuping contains item that needs to created manually into AWS that
