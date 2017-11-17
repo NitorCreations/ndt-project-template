@@ -1,0 +1,112 @@
+@startuml
+
+!includeurl http://styleguide.nitor.fi/assets/plantuml/nitorstyle.plantuml
+skinparam titleFontName Industry Inc Base
+skinparam titleFontSize 42
+skinparam defaultFontName Source Code Pro
+skinparam backgroundColor transparent
+
+title Overview of Nitor Deploy Tool (ndt) actualization
+
+database "ndt-template-repository" as ndt_repo {
+
+    folder "Jenkins_src" {
+
+        folder base_image [
+          - CentOS base AMI
+        ]
+
+        folder AMI_bakery_stack [
+          - jenkins installation with\nability to bake new AMIs\nbased on other components
+        ]
+    }
+
+    folder "Component" as comp {
+
+        folder _base_image [
+          - Shared image definition\nfor instances in this component
+        ]
+
+        folder Stack_1 [
+          - Stack for defining a instance
+        ]
+
+        folder Stack_2 [
+          - Stack for defining a instance
+        ]
+    }
+
+    artifact "generate groovy script"
+}
+
+agent "nitor deploy tool" as ndt
+
+cloud "AWS" {
+
+    database "AMI repository" as ami_repo
+
+    "IAM Admin Role" as admin
+
+    "A role" as stack_role
+
+    package "VPC" as vpc {
+       [Subnets] as network
+
+       frame jenkins {
+           [Generate and update jobs] as groovy
+
+           rectangle stack1 {
+             [create stack1 ami] as ami1_job
+             [stack1 deploy dev] as stack1_dev_job
+             [stack1 deploy prod] as stack1_prod_job
+           }
+
+           rectangle stack2 {
+             [create stack2 ami] as ami2_job
+             [stack2 deploy dev] as stack2_dev_job
+             [stack2 deploy prod] as stack2_prod_job
+           }
+       }
+
+       rectangle dev {
+           [Stack1 instance dev] as stack1_dev
+           [Stack2 instance dev] as stack2_dev
+
+       }
+
+       rectangle prod {
+           [Stack1 instance prod] as stack1_prod
+           [Stack2 instance prod] as stack2_prod
+       }
+    }
+}
+
+admin .. ndt : uses
+
+ndt_repo .. ndt : uses as persistent \ndata store for configurations
+
+ndt_repo .. groovy : watches
+
+ndt --> network : creates
+ndt --> jenkins : creates
+ndt --> vpc : creates
+
+groovy --> stack1 : creates
+groovy --> stack2
+
+stack1_dev_job --> stack1_dev : controls instance
+stack2_dev_job --> stack2_dev
+
+stack1_prod_job --> stack1_prod : controls instance
+stack2_prod_job --> stack2_prod
+
+ami1_job --> ami_repo
+ami2_job --> ami_repo : creates and upload
+
+ami_repo .. stack2_prod_job : uses
+
+ndt --> stack_role : creates
+
+stack_role .. stack1_prod : uses
+
+@enduml
