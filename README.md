@@ -7,6 +7,8 @@ account.
 
 ## Overview
 
+![overview](figs/overview.png)
+
 Folders in root level describe components in the virtual private cloud
 (VPC). Each folder contains different stacks that are baked into image
 that is defined in the component root level (`image` sub folder).
@@ -32,6 +34,7 @@ Prequisite:
   * python < 3.0
   * `nitor-deploy-tools` (in pip)
   * `ansible` (in pip)
+  ** ansible needs `boto`
 
 Protip: add following shell function to suitable place, to get
 autocompletion working.
