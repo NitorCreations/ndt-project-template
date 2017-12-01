@@ -1,0 +1,61 @@
+---
+paramSubnetInfraA:
+  Description: subnet A
+  Type: 'AWS::EC2::Subnet::Id'
+  Default:
+    StackRef: {region: {Ref: 'AWS::Region'}, stackName: network, paramName: subnetInfraA}
+paramSubnetInfraB:
+  Description: subnet B
+  Type: 'AWS::EC2::Subnet::Id'
+  Default:
+    StackRef: {region: {Ref: 'AWS::Region'}, stackName: network, paramName: subnetInfraB}
+paramSubnetInfraC:
+  Description: subnet C
+  Type: 'AWS::EC2::Subnet::Id'
+  Default:
+    StackRef: {region: {Ref: 'AWS::Region'}, stackName: network, paramName: subnetInfraC}
+paramVPCId:
+  Description: VPC Id
+  Type: 'AWS::EC2::VPC::Id'
+  Default:
+    StackRef: {region: {Ref: 'AWS::Region'}, stackName: network, paramName: VPC}
+paramAmi:
+  Description: AMI id for server
+  Type: 'AWS::EC2::Image::Id'
+  Default: ""
+paramAmiName:
+  Description: AMI name for server
+  Type: String
+  Default: ""
+paramDeployToolsVersion:
+  Description: The aws-utils version to deploy, leave empty to use the version baked into the image.
+  Type: String
+  Default: "latest"
+paramSshKeyName:
+  Description: SSH key for AMIBakery
+  Type: String
+  Default: ((ssh-key))
+paramDnsName:
+  Description: DNS name for AMIBakery
+  Type: String
+  Default: ((dns))
+paramHostedZoneName:
+  Description: Route 53 hosted zone name
+  Type: String
+  Default: ((zone))
+paramInstanceType:
+  Description: Instance type for AMIBakery
+  Type: String
+  Default: ((instance))
+paramEip:
+  Description: Elastic IP address for AMIBakery
+  Type: String
+  Default: ((eip))
+paramEnvId:
+  Description: Environment name
+  Type: String
+  Default: "dev"
+paramBackupBucket:
+  Description: Backup bucket for various backups
+  Type: String
+  Default: "ndt-template-backup"

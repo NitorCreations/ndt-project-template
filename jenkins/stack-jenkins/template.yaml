@@ -2,21 +2,21 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: NDT template project jenkins
 Parameters:
   'Fn::Merge':
-  - { 'Fn::ImportYaml': ../../common-params.yaml,
+  - { 'Fn::ImportYaml': ../../common/common-params.yaml,
       ssh-key: archimedes-admin,
-      dns: jenkins.foobar.nitor.com,
-      zone: foobar.nitor.com.,
+      dns: jenkins.ndt-template.nitor.com,
+      zone: ndt-template.nitor.com.,
       instance: m4.large,
-      eip: 35.156.91.168 }
+      eip: xxx.xxx.xxx.xxx }
   - paramAdditionalFiles:
       Description: Whitespace-separated list of additional files needed on the server.
       Type: String
-      Default: "/var/lib/jenkins/jenkins-home/.ssh/archimedes-admin.pem"
+      Default: "/var/lib/jenkins/jenkins-home/.ssh/ndt-template-jenkins-admin.pem"
       AllowedPattern: "(/\\S+(\\s+/\\S+)*)?"
     paramEBSTag:
       Description: Tag for jenkins home EBS volume snapshots
       Type: String
-      Default: "archimedes-jenkins"
+      Default: "ndt-template-jenkins"
     paramEBSSize:
       Description: Size for the jenkins home EBS volume
       Type: String
@@ -24,7 +24,7 @@ Parameters:
     paramDockerEBSTag:
       Description: Tag for jenkins home EBS volume snapshots
       Type: String
-      Default: "archimedes-jenkins-docker"
+      Default: "ndt-template-jenkins-docker"
     paramDockerEBSSize:
       Description: Size for the jenkins home EBS volume
       Type: String
