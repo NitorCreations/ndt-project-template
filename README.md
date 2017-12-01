@@ -60,19 +60,43 @@ Project template is designed to deploy the technology stack into
 already created AWS account with user that has administration
 priviliges.
 
- 1. Create AWS account (optional)
+ 1. Create AWS account (if needed)
  2. Create IAM user with AdministrativeAccess permissions. *Remember
     to gather access key secrets.*
- 3. Setup ndt with command `ndt cli-setup`
+ 3. Setup ndt with command `ndt setup-cli`
+	1. Profile name is id to this account access in your local machine
+    2. key ID and secrects are those that you created to in previous step
+    3. Default region is in format of AWS labeling (i.e. eu-central-1 etc)
  4. Now you should have project profile sourceable in `~/bin/<profile-name>`
 
-### Setup nesessary stacks
+Now you should have programmatic access to your AWS account where the
+stack can be deployed.
 
-NDT provides bootstraping scripts to generate required stacks for
+### Setup bootstrap stacks
+
+NDT provides bootstrapping scripts to generate required stacks for
 deploying rest of the components.
 
-  1. Create network stack with command `ndt setup-networks`. Now you
-     should have network configurations present in `common/` folder.
+  1. Create network stack with command `ndt setup-networks`. NDT
+     proposes defaults and provides possibility deploy it once it has
+     gathered configurations.
+  2. Run `vault -i` to create nitor-vault stack into your AWS
+     account. This creates a CloudFormation stack where one can store
+     and retrieve shared secters.
+  3. Create needed baking roles into project with following command
+     `ndt setup-bakery-roles`.
+	 - TODO not yet implemented into NDT, currently part of this
+        template project.
+  4. This template requires that one dns zone is configured for the
+     AWS account. Do this in route53 and set domain into
+     `infra.properties`.
+  5. Create necessary keypair(s) for accessing instance(s).
+	 - Protip: `aws ec2 create-key-pair --key-name <keyname> | jq -r .KeyMaterial > <keyname-private>`
+
+After successful run, you should now have required stacks (network,
+vault, bakery-roles) formed into CloudFormation, stack configurations
+generated into `bootstrap` folder, dns zone setup and necessary
+instance keys.
 
 ### Setup project Jenkins
 
@@ -82,19 +106,14 @@ required CI tools that are needed to bake rest of the component that
 are defined in the project.
 
   1. Reserve a one elastic IP to be assigned for jenkins.
-  2. Create needed baking roles into project with following command
-     `ndt bootstrap bakery-roles`.
-  3. Create necessary keypair for accessing instance(s).
-  4. Run `ndt setup-fetch-secrets` to setup tooling to use those
-     accesses.
-  5. Bake jenkins itself with `ndt bake-image jenkins jenkins-bakery`
+  4. Bake jenkins itself with `ndt bake-image jenkins jenkins-bakery`
      (where jenkins refers to component and jenkins-bakery to the
      stack).
-  6. After baking we can deploy the jenkins stack with command `ndt
+  5. After baking we can deploy the jenkins stack with command `ndt
      deploy-stack jenkins jenkins-bakery`
-  7. Now you should go and assign reserved elastic IP into newly
+  6. Now you should go and assign reserved elastic IP into newly
      created instance
-  8. Access Jenkins instance and install plugins required for baking:
+  7. Access Jenkins instance and install plugins required for baking:
      * `Process job DSLs`
 
 ### Setup components of the stack to bakery
