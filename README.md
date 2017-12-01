@@ -7,7 +7,7 @@ account.
 
 ## Overview
 
-![overview](figs/overview.png)
+![overview](docs/figs/overview.png)
 
 Folders in root level describe components in the virtual private cloud
 (VPC). Each folder contains different stacks that are baked into image
