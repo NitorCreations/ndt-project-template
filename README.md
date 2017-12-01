@@ -34,7 +34,7 @@ Prequisite:
   * python < 3.0
   * `nitor-deploy-tools` (in pip)
   * `ansible` (in pip)
-  ** ansible needs `boto`
+	* ansible needs `boto`
 
 Protip: add following shell function to suitable place, to get
 autocompletion working.
