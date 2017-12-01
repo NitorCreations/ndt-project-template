@@ -4,7 +4,7 @@ source $(n-include tool_installers.sh)
 source $(n-include apache_tools.sh)
 setup-fetch-secrets.sh vault
 
-pip install ansible pywinrm pylint wmi s3cmd httpie-edgegrid
+pip install ansible pywinrm pylint wmi s3cmd httpie-edgegrid==1.0.5
 
 npm i -g gulp browserify jshint
 

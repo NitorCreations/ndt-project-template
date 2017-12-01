@@ -91,7 +91,7 @@ deploying rest of the components.
      AWS account. Do this in route53 and set domain into
      `infra.properties`.
   5. Create necessary keypair(s) for accessing instance(s).
-	 - Protip: `aws ec2 create-key-pair --key-name <keyname> | jq -r .KeyMaterial > ~/.ssh/<keyname-private>.pem`
+	 - Protip: `aws ec2 create-key-pair --key-name ndt-template-admin | jq -r .KeyMaterial > ~/.ssh/ndt-template-admin.pem`
 
 After successful run, you should now have required stacks (network,
 vault, bakery-roles) formed into CloudFormation, stack configurations
@@ -108,11 +108,14 @@ are defined in the project.
   1. Reserve a one elastic IP to be assigned for jenkins.
   2. Go and modify values in `bakery/stack-jenkins` to match values
      for dns zone and eip what you have defined.
-  2. Bake jenkins itself with `ndt bake-image jenkins jenkins-bakery`
+  2. Bake jenkins itself with `ndt bake-image bakery jenkins`
      (where jenkins refers to component and jenkins-bakery to the
      stack).
+	 - NOTICE: For the first try you have to go and accept term and
+        agreements. See the first failure logs for details (go to
+        pricing and find accepment button).
   3. After baking we can deploy the jenkins stack with command `ndt
-     deploy-stack jenkins jenkins-bakery`
+     deploy-stack bakery jenkins`
   4. Now you should go and assign reserved elastic IP into newly
      created instance
   5. Access Jenkins instance and install plugins required for baking:
