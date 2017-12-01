@@ -22,7 +22,16 @@ can 'quickly' setup a project components into AWS.
 
 ### Overview of required properties and existing configuration files
 
-TODO
+This project template has defined only required property files and
+required properties into this project. Descriptions of required
+properties are distributed into these properties files. To share
+custom properties in the component hierarchy, define them in these
+files.
+
+Properties in these files should be distributed like the components
+are, i.e. component specific properties should be in component
+specific properties files. One of the benifits is that it makes
+understanding and maintanance of your project infra easier.
 
 ## Setup
 
