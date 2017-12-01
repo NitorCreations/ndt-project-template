@@ -3,7 +3,7 @@ Description: NDT template project jenkins
 Parameters:
   'Fn::Merge':
   - { 'Fn::ImportYaml': ../../common/common-params.yaml,
-      ssh-key: archimedes-admin,
+      ssh-key: ndt-template-admin,
       dns: jenkins.ndt-template.nitor.com,
       zone: ndt-template.nitor.com.,
       instance: m4.large,
@@ -11,7 +11,7 @@ Parameters:
   - paramAdditionalFiles:
       Description: Whitespace-separated list of additional files needed on the server.
       Type: String
-      Default: "/var/lib/jenkins/jenkins-home/.ssh/ndt-template-jenkins-admin.pem"
+      Default: "/var/lib/jenkins/jenkins-home/.ssh/ndt-template-admin.pem"
       AllowedPattern: "(/\\S+(\\s+/\\S+)*)?"
     paramEBSTag:
       Description: Tag for jenkins home EBS volume snapshots
