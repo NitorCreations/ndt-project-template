@@ -31,10 +31,10 @@ tooling can be bootstrapped, ndt tooling setup and intializing project
 stacks that one can start implement project specific components.
 
 Prequisite:
-  * python < 3.0
+  * `python < 3.0`
   * `nitor-deploy-tools` (in pip)
   * `ansible` (in pip)
-	* ansible needs `boto`
+    * ansible needs `boto`
 
 Protip: add following shell function to suitable place, to get
 autocompletion working.
@@ -48,7 +48,7 @@ fi
 ### Setup new AWS account
 
 Project template is designed to deploy the technology stack into
-allready created AWS account with user that has administration
+already created AWS account with user that has administration
 priviliges.
 
  1. Create AWS account (optional)
@@ -62,7 +62,8 @@ priviliges.
 NDT provides bootstraping scripts to generate required stacks for
 deploying rest of the components.
 
-  1. create network stack with command `ndt setup-networks` ?
+  1. Create network stack with command `ndt setup-networks`. Now you
+     should have network configurations present in `common/` folder.
 
 ### Setup project Jenkins
 
@@ -71,20 +72,21 @@ baking platform for the other components in the pool. It will provide
 required CI tools that are needed to bake rest of the component that
 are defined in the project.
 
-  1. Reserve a one elastic IP to be assigned for jenkins
+  1. Reserve a one elastic IP to be assigned for jenkins.
   2. Create needed baking roles into project with following command
-     `ndt bootstrap bakery-roles??`
-  3. Create necessary keypair for accessing instance(s)
-  4. TODO do some secrets magic `ndt setup-fetch-secrets` ? Don't
-     remember why...
+     `ndt bootstrap bakery-roles`.
+  3. Create necessary keypair for accessing instance(s).
+  4. Run `ndt setup-fetch-secrets` to setup tooling to use those
+     accesses.
   5. Bake jenkins itself with `ndt bake-image jenkins jenkins-bakery`
      (where jenkins refers to component and jenkins-bakery to the
-     stack)
+     stack).
   6. After baking we can deploy the jenkins stack with command `ndt
      deploy-stack jenkins jenkins-bakery`
   7. Now you should go and assign reserved elastic IP into newly
      created instance
-  8. TODO Go and install required tools for baking?
+  8. Access Jenkins instance and install plugins required for baking:
+     * `Process job DSLs`
 
 ### Setup components of the stack to bakery
 
