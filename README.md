@@ -106,19 +106,23 @@ required CI tools that are needed to bake rest of the component that
 are defined in the project.
 
   1. Reserve a one elastic IP to be assigned for jenkins.
-  2. Go and modify values in `bakery/stack-jenkins` to match values
-     for dns zone and eip what you have defined.
-  2. Bake jenkins itself with `ndt bake-image bakery jenkins`
+  2. Create accessible route53 hosted zones.
+  3. Make sure that domain has certification keys available in vault
+     with `ensure-letsencrypt-certs.sh <domain-name>` (TODO this will
+     not work out of the box, will be fixed in latest ndt version)
+  4. Make sure that vault has previously created keypair stored to
+	 `<jenkins-domain-name>.rsa` named secret.
+  2. Go and modify values in `bakery/stack-jenkins/template.yaml` to
+     match values for dns zone and eip what you have defined.
+  3. Bake jenkins itself with `ndt bake-image bakery jenkins`
      (where jenkins refers to component and jenkins-bakery to the
      stack).
 	 - NOTICE: For the first try you have to go and accept term and
         agreements. See the first failure logs for details (go to
         pricing and find accepment button).
-  3. After baking we can deploy the jenkins stack with command `ndt
-     deploy-stack bakery jenkins`
-  4. Now you should go and assign reserved elastic IP into newly
-     created instance
-  5. Access Jenkins instance and install plugins required for baking:
+  4. After baking we can deploy the jenkins stack with command `ndt
+     deploy-stack bakery jenkins "" ndt_template_bake`
+  6. Access Jenkins instance and install plugins required for baking:
      * `Process job DSLs`
 
 ### Setup components of the stack to bakery

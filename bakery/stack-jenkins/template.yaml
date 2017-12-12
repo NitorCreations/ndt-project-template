@@ -4,8 +4,8 @@ Parameters:
   'Fn::Merge':
   - { 'Fn::ImportYaml': ../../common/common-params.yaml,
       ssh-key: ndt-template-admin,
-      dns: jenkins.ndt-template.nitor.com,
-      zone: ndt-template.nitor.com.,
+      dns: jenkins.ndt-template.nitorio.us,
+      zone: ndt-template.nitorio.us.,
       instance: m4.large,
       eip: xxx.xxx.xxx.xxx }
   - paramAdditionalFiles:
