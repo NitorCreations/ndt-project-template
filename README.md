@@ -112,18 +112,19 @@ are defined in the project.
      not work out of the box, will be fixed in latest ndt version)
   4. Make sure that vault has previously created keypair stored to
 	 `<jenkins-domain-name>.rsa` named secret.
-  2. Go and modify values in `bakery/stack-jenkins/template.yaml` to
+  5. Go and modify values in `bakery/stack-jenkins/template.yaml` to
      match values for dns zone and eip what you have defined.
-  3. Bake jenkins itself with `ndt bake-image bakery jenkins`
+  6. Bake jenkins itself with `ndt bake-image bakery jenkins`
      (where jenkins refers to component and jenkins-bakery to the
      stack).
 	 - NOTICE: For the first try you have to go and accept term and
         agreements. See the first failure logs for details (go to
         pricing and find accepment button).
-  4. After baking we can deploy the jenkins stack with command `ndt
+  7. After baking we can deploy the jenkins stack with command `ndt
      deploy-stack bakery jenkins "" ndt_template_bake`
-  6. Access Jenkins instance and install plugins required for baking:
-     * `Process job DSLs`
+  8. Now you can access Jenkins from the new address. Admin password
+     can be retrieved from instance logs
+     `/var/log/jenkins/jenkins.log`
 
 ### Setup components of the stack to bakery
 
