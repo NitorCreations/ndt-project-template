@@ -77,16 +77,14 @@ stack can be deployed.
 NDT provides bootstrapping scripts to generate required stacks for
 deploying rest of the components.
 
-  1. Create network stack with command `ndt setup-networks`. NDT
+  1. Create network stack with command `ndt create-stack network`. NDT
      proposes defaults and provides possibility deploy it once it has
      gathered configurations.
   2. Run `vault -i` to create nitor-vault stack into your AWS
      account. This creates a CloudFormation stack where one can store
      and retrieve shared secters.
   3. Create needed baking roles into project with following command
-     `ndt setup-bakery-roles`.
-	 - TODO not yet implemented into NDT, currently part of this
-        template project.
+     `ndt create-stack bakery-roles`.
   4. This template requires that one dns zone is configured for the
      AWS account. Do this in route53 and set domain into
      `infra.properties`.
