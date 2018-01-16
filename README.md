@@ -44,6 +44,7 @@ Prequisite:
   * `nitor-deploy-tools` (in pip)
   * `ansible` (in pip)
     * ansible needs `boto`
+  * `jq`
 
 Protip: add following shell function to suitable place, to get
 autocompletion working.
@@ -72,24 +73,130 @@ priviliges.
 Now you should have programmatic access to your AWS account where the
 stack can be deployed.
 
+### Git
+
+NDT is meant to be run at the root of a git repository. So either clone
+a repository for this purpose or initialize one in the current directory
+by running
+``` bash
+git init .
+```
+
 ### Setup bootstrap stacks
 
 NDT provides bootstrapping scripts to generate required stacks for
 deploying rest of the components.
 
-  1. Create network stack with command `ndt create-stack network`. NDT
-     proposes defaults and provides possibility deploy it once it has
-     gathered configurations.
-  2. Run `vault -i` to create nitor-vault stack into your AWS
-     account. This creates a CloudFormation stack where one can store
-     and retrieve shared secters.
-  3. Create needed baking roles into project with following command
-     `ndt create-stack bakery-roles`.
-  4. This template requires that one dns zone is configured for the
-     AWS account. Do this in route53 and set domain into
-     `infra.properties`.
-  5. Create necessary keypair(s) for accessing instance(s).
-	 - Protip: `aws ec2 create-key-pair --key-name ndt-template-admin | jq -r .KeyMaterial > ~/.ssh/ndt-template-admin.pem`
+#### Network
+Create network stack with command `ndt create-stack network`. NDT
+proposes defaults that will work unless you have specific routing
+needs.
+
+Once ndt has created the stack and other necessary files, ndt will
+print instructions on how to deploy the stack. In this case it is:
+``` bash
+ndt deploy-stack bootstrap network
+```
+
+#### Secrets store
+
+You will need a solution for storing secrets like passwords, keys and
+certificates. The easiest way to achive this is to use nitor-vault.
+Run `vault -i` to create nitor-vault stack into your AWS account.
+This creates a CloudFormation stack with a KMS key and an S3 bucket
+where one can store and retrieve shared secters.
+
+Taking this to use in all of your stacks and baking requires to have
+`fetch-secrets.sh` and `store-secret.sh` on your path that use
+vault for the actual storing and fetching. This is easy to set up by
+running `sudo setup-fetch-secrets.sh vault`
+
+You have the option of implementing secret storage by yourself. You are
+only required to provide the above scripts with the following usage:
+
+``` bash
+fetch-secrets.sh get <mode> <secret-paths...>
+# Get secret paths with given file mode stored as $(basename secret-path)
+fetch-secrets.sh show <secret-name>
+# Prints given secret to stdout
+fetch-secrets.sh <login|logout>
+# Logs in or logs out to underlying secret store (if necessary - if not, you can provide dummy implementations for these calls)
+```
+
+``` bash
+store-secrets.sh <secret-name>
+# Reads secret from stdin and store it with given name
+```
+
+#### Bakery roles
+
+Create needed baking roles into project with following command
+`ndt create-stack bakery-roles`. Again once required files are created,
+you can deploy the stack with the instructions printed at the end of
+the command output.
+
+#### DNS
+
+To effectively run services, you need a public DNS name to refer to
+the components. There are many ways to set this up, but the instance
+templates here require that you set this up outside of this project.
+You can delegate a subdomain to Route53 from some other account or DNS
+service, you can register a new domain in Route53 or you can even
+migrate an existing domain from another service.
+
+Documentation for all of the options here:
+https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring.html
+
+It is recommended to just register a new domain since it's relatively
+cheap and keeps the new infrastructure nicely isolated from any external
+dependencies.
+
+Once you have a domain set up, you can set up a common shared file for
+easy access for the rest of the templates by running `ndt create-stack route53`
+
+Here there is now stack to actually deploy, only a shared yaml file is
+created with the id and name of the hosted zone to use.
+
+#### SSH Keys
+
+There are three main uses for ssh keys in ndt defined architecture:
+1. Key used in baking - ansible uses this key to log in an do all necessary configuration
+2. Key used in running instances - key that can be used to log in to do troubleshooting
+   and (hopefully rare) manual maintenance
+3. Key that an insance uses to authenticate to external services like git repositories
+
+All of the keys above could be the same key, but here we show how to make each key separate.
+
+##### Create a key for baking:
+
+``` bash
+AWS_KEY_NAME=aws-bake-key
+aws ec2 create-key-pair --key-name $AWS_KEY_NAME | jq -r .KeyMaterial > ~/.ssh/$AWS_KEY_NAME.pem`
+echo "AWS_KEY_NAME=$AWS_KEY_NAME" >> infra.properties
+vault -s -f ~/.ssh/$AWS_KEY_NAME.pem
+```
+##### Create a key for running instanes:
+
+``` bash
+AWS_KEY_NAME=aws-instances
+aws ec2 create-key-pair --key-name $AWS_KEY_NAME | jq -r .KeyMaterial > ~/.ssh/$AWS_KEY_NAME.pem`
+echo "paramSshKeyName=$AWS_KEY_NAME" >> infra.properties
+vault -s -f ~/.ssh/$AWS_KEY_NAME.pem
+```
+##### Create a key for an instance to identify itself:
+
+The instance starting up will often look (depending on instance needs) for an
+ssh key to identify itself from the secret store with the name `hostname.rsa`
+
+``` bash
+AWS_KEY_NAME=jenkins.example.com.rsa
+ssh-keygen -b 4096 -f ~/.ssh/$AWS_KEY_NAME
+vault -s -f ~/.ssh/$AWS_KEY_NAME
+vault -s -f ~/.ssh/$AWS_KEY_NAME.pub
+```
+### Good to go
+
+
 
 After successful run, you should now have required stacks (network,
 vault, bakery-roles) formed into CloudFormation, stack configurations
@@ -106,23 +213,25 @@ are defined in the project.
   1. Reserve a one elastic IP to be assigned for jenkins.
   2. Create accessible route53 hosted zones.
   3. Make sure that domain has certification keys available in vault
-     with `ensure-letsencrypt-certs.sh <domain-name>` (TODO this will
-     not work out of the box, will be fixed in latest ndt version)
+     with `CERT_DIR=. ensure-letsencrypt-certs.sh <domain-name>`
   4. Make sure that vault has previously created keypair stored to
-	 `<jenkins-domain-name>.rsa` named secret.
-  5. Go and modify values in `bakery/stack-jenkins/template.yaml` to
-     match values for dns zone and eip what you have defined.
-  6. Bake jenkins itself with `ndt bake-image bakery jenkins`
-     (where jenkins refers to component and jenkins-bakery to the
+	 `<jenkins-domain-name>.rsa` named secret. If not, see instructions above.
+  5. Create jenkins stack by running `ndt create-stack jenkins`
+  6. Accept the license terms of the base ami used for baking. Even though
+     we use a free ami for the base image, the ami license terms need to be
+     accepted via the Amazon Marketplace. https://aws.amazon.com/marketplace,
+     search for the ami used (value of AMIID_centos in infra.properties),
+     click "Continue to subscribe", go to "Manual launch", click 
+     "Accept software terms" on the top on the right.
+  6. Bake jenkins itself with `ndt bake-image jenkins jenkins`
+     (where first jenkins refers to component and latter jenkins to the
      stack).
-	 - NOTICE: For the first try you have to go and accept term and
-        agreements. See the first failure logs for details (go to
-        pricing and find accepment button).
   7. After baking we can deploy the jenkins stack with command `ndt
-     deploy-stack bakery jenkins "" ndt_template_bake`
+     deploy-stack jenkins jenkins "$(cat ami-id.txt)"`
   8. Now you can access Jenkins from the new address. Admin password
      can be retrieved from instance logs
-     `/var/log/jenkins/jenkins.log`
+     `/var/log/jenkins/jenkins.log` Login user is centos and the key is
+     the one configured for running instances in the instructions above
 
 ### Setup components of the stack to bakery
 
@@ -136,7 +245,7 @@ in `generate_jobs.groovy` which lays in the root of the project and
 will be given as input to the DSL task.
 
 First baking will require permission granting for the job from
-'scriptApproval' section in the jenkins.
+'ScriptApproval' section in the jenkins.
 
 After first succesful run of the bake recipies generation job, jenkins
 will have view named `JENKINS_JOB_PREFIX`. Each branch that wanted to
