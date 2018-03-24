@@ -154,7 +154,7 @@ dependencies.
 Once you have a domain set up, you can set up a common shared file for
 easy access for the rest of the templates by running `ndt create-stack route53`
 
-Here there is now stack to actually deploy, only a shared yaml file is
+Here there is no stack to actually deploy, only a shared yaml file is
 created with the id and name of the hosted zone to use.
 
 #### SSH Keys
