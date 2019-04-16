@@ -1,7 +1,7 @@
-# Nitor Deploy tools - AWS Project template
+# Nameless Deploy tools - AWS Project template
 
 Template project for projects that use Amazon Web Service (AWS) as an
-environment and Nitor Deploy Tools (NDT) for tooling. This repository
+environment and Nameless Deploy Tools (NDT) for tooling. This repository
 is a template that can be used to start new AWS infra project into own
 account.
 
@@ -41,7 +41,7 @@ stacks that one can start implement project specific components.
 
 Prequisite:
   * `python < 3.0`
-  * `nitor-deploy-tools` (in pip)
+  * `nameless-deploy-tools` (in pip)
   * `ansible` (in pip)
     * ansible needs `boto`
   * `jq`
@@ -50,8 +50,8 @@ Protip: add following shell function to suitable place, to get
 autocompletion working.
 
 ```shell
-if command -v nitor-dt-register-complete > /dev/null 2>&1; then
-    eval "$(nitor-dt-register-complete)"
+if command -v nameless-dt-register-complete > /dev/null 2>&1; then
+    eval "$(nameless-dt-register-complete)"
 fi
 ```
 
@@ -101,8 +101,8 @@ ndt deploy-stack bootstrap network
 #### Secrets store
 
 You will need a solution for storing secrets like passwords, keys and
-certificates. The easiest way to achive this is to use nitor-vault.
-Run `vault -i` to create nitor-vault stack into your AWS account.
+certificates. The easiest way to achive this is to use nameless-vault.
+Run `vault -i` to create nameless-vault stack into your AWS account.
 This creates a CloudFormation stack with a KMS key and an S3 bucket
 where one can store and retrieve shared secters.
 

@@ -6,7 +6,7 @@ skinparam titleFontSize 42
 skinparam defaultFontName Source Code Pro
 skinparam backgroundColor transparent
 
-title Overview of Nitor Deploy Tool (ndt) actualization
+title Overview of Nameless Deploy Tool (ndt) actualization
 
 database "ndt-template-repository" as ndt_repo {
 
@@ -39,7 +39,7 @@ database "ndt-template-repository" as ndt_repo {
     artifact "generate groovy script"
 }
 
-agent "nitor deploy tool" as ndt
+agent "nameless deploy tool" as ndt
 
 cloud "AWS" {
 
